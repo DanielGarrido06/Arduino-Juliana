@@ -71,6 +71,9 @@ void setup()
 
 void loop()
 {   
+    // Função readInfrared() para ler o botão pressionado no controle remoto gera erro no Tinkercard por motivo desconhecido,
+    // A função foi copiada do exemplo do Tinkercad, onde ela funciona corretamente, mas nesse projeto não funciona.
+    
     botao = readInfrared();
     if(botao == 0) { // Botão de energia pressionado
         // Muda o estado do sistema
