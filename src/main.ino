@@ -9,9 +9,19 @@
 
 #include <IRremote.h>
 
-int button = 0;
+int button = 0; // Variável para armazenar o botão pressionado
 
-int state = 0;
+int state = 0; // Estado do sistema: 0 = OFF, 1 = ON
+
+int lastButton = -1 ; // Variável para armazenar o último botão pressionado
+
+int segA = 4; // Pinos do display de 7 segmentos
+int segB = 3;
+int segC = 9;
+int segD = 8;
+int segE = 7;
+int segF = 5;
+int segG = 6;
 
 
 Adafruit_LiquidCrystal lcd_1(0);
@@ -64,6 +74,13 @@ int readInfrared() {
     }
     // Map it to a specific button on the remote
     result = mapCodeToButton(code);
+    if (result == -1) {
+      Serial.print("Código IR desconhecido: ");
+      Serial.println(code, HEX);
+    } else {
+      Serial.print("Botão pressionado: ");
+      Serial.println(result);
+    }
     // Enable receiving of the next value
     IrReceiver.resume();
   }
@@ -72,6 +89,13 @@ int readInfrared() {
 
 void setup()
 {
+
+  // Configuração dos pinos do display de 7 segmentos
+  for (int i = 3; i <= 9; i++) {
+    pinMode(i, OUTPUT);
+    digitalWrite(i, LOW); // Inicializa todos os pinos como LOW
+  }
+
   IrReceiver.begin(2);
   lcd_1.begin(16, 2);
   lcd_1.print("SISTEMA: OFF");
@@ -82,32 +106,41 @@ void loop()
 {
   button = readInfrared();
 
-  if (state == 0) {
-    // Estado de espera: só aceita POWER pelo IR
-    if (button == 0) {
-      lcd_1.clear();
+  // Verifica se o botão pressionado é diferente do último
+  if (button != lastButton) { 
+    lastButton = button; // Atualiza o último botão pressionado
+      
+    if (state == 0) {
+      // Estado de espera: só aceita POWER pelo IR
+      if (button == 0) {
+        lcd_1.clear();
+        state = 1;
+        userInputBuffer[0] = '\0';
+        lcd_1.setCursor(0, 1);
+        lcd_1.print("                ");
+        while (Serial.available()) Serial.read(); // Limpa o buffer da Serial
+      }
+    } else if (state == 1) {
+      // Estado de aquisição
       lcd_1.setCursor(0, 0);
-      lcd_1.print("SISTEMA: ON");
-      state = 1;
-      userInputBuffer[0] = '\0';
-      lcd_1.setCursor(0, 1);
-      lcd_1.print("                ");
-    }
-  } else if (state == 1) {
-    // Estado de aquisição
-    lcd_1.setCursor(0, 0);
-    lcd_1.print("SISTEMA: ON ");
+      lcd_1.print("SISTEMA: ON ");
 
-    // POWER desliga o sistema
-    if (button == 0) {
-      lcd_1.clear();
-      lcd_1.setCursor(0, 0);
-      lcd_1.print("SISTEMA: OFF");
-      state = 0;
-      // TODO: DISPLAY DE 7 SEGMENTOS
+      // POWER desliga o sistema
+      if (button == 0) {
+        lcd_1.clear();
+        lcd_1.setCursor(0, 0);
+        lcd_1.print("SISTEMA: OFF");
+        state = 0;
+        userInputBuffer[0] = '\0'; // Limpa o buffer ao desligar
+        lcd_1.setCursor(0, 1);
+        lcd_1.print("                "); // Limpa a linha do LCD
+        // TODO: DISPLAY DE 7 SEGMENTOS
+      }
     }
+  }
 
-    // Processa entradas do teclado via Serial
+  // Processa entradas do teclado via Serial SOMENTE quando ligado
+  if (state == 1) {
     while (Serial.available()) {
       char c = Serial.read();
       // Aceita apenas números e letras
@@ -132,9 +165,7 @@ void loop()
           lcd_1.print(" ");
         }
       }
-      // Ignora outros caracteres
     }
   }
-
   delay(10); // Delay para estabilidade
 }
