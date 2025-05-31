@@ -3,7 +3,6 @@
 #define DECODE_NEC
 #define IR_RECEIVE_PIN      2
 #define EXCLUDE_UNIVERSAL_PROTOCOLS   // Saves up to 1000 bytes program space.
-#define EXCLUDE_EXOTIC_PROTOCOLS      // saves around 650 bytes program space if all other protocols are active
 
 #include <Adafruit_LiquidCrystal.h>
 
@@ -14,6 +13,9 @@ int button = 0; // Variável para armazenar o botão pressionado
 int state = 0; // Estado do sistema: 0 = OFF, 1 = ON
 
 int lastButton = -1 ; // Variável para armazenar o último botão pressionado
+
+unsigned long lastButtonTime = 0;
+const unsigned long DEBOUNCE_DELAY = 500; // 500ms debounce
 
 int segA = 4; // Pinos do display de 7 segmentos
 int segB = 3;
@@ -68,7 +70,7 @@ int readInfrared() {
     // Get the infrared code
     unsigned long code = IrReceiver.decodedIRData.decodedRawData;
     // Ignore NEC repeat code
-    if (code == 0xFFFFFFFF) {
+    if (code == 0xFFFFFFFF || code == 0x00000000) {
       IrReceiver.resume();
       return -1;
     }
@@ -107,8 +109,9 @@ void loop()
   button = readInfrared();
 
   // Verifica se o botão pressionado é diferente do último
-  if (button != lastButton) { 
+  if (button != lastButton && (millis() - lastButtonTime > DEBOUNCE_DELAY)) { 
     lastButton = button; // Atualiza o último botão pressionado
+    lastButtonTime = millis(); // Atualiza o tempo do último botão
       
     if (state == 0) {
       for (int i = 3; i <= 9; i++) {
