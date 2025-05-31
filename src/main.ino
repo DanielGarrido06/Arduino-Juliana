@@ -111,6 +111,9 @@ void loop()
     lastButton = button; // Atualiza o último botão pressionado
       
     if (state == 0) {
+      for (int i = 3; i <= 9; i++) {
+        digitalWrite(i, LOW); // Inicializa todos os pinos como LOW
+  }
       // Estado de espera: só aceita POWER pelo IR
       if (button == 0) {
         lcd_1.clear();
@@ -143,8 +146,8 @@ void loop()
   if (state == 1) {
     while (Serial.available()) {
       char c = Serial.read();
-      // Aceita apenas números e letras
-      if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+      // Aceita apenas números
+      if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
         // Converte para maiúsculo se for letra minúscula
         if (c >= 'a' && c <= 'z') {
           c = c - 'a' + 'A';
@@ -164,6 +167,33 @@ void loop()
         for (int i = strlen(userInputBuffer); i < 16; i++) {
           lcd_1.print(" ");
         }
+      } else if (c >= '0' && c <= '9') {
+        // Se for um número, exibi-lo no display de 7 segmentos
+        int digit = c - '0';
+        // Tabela de segmentos para dígitos 0-9 (A-G)
+        const bool segmentMap[10][7] = {
+          {1,1,1,1,1,1,0}, // 0
+          {0,1,1,0,0,0,0}, // 1
+          {1,1,0,1,1,0,1}, // 2
+          {1,1,1,1,0,0,1}, // 3
+          {0,1,1,0,0,1,1}, // 4
+          {1,0,1,1,0,1,1}, // 5
+          {1,0,1,1,1,1,1}, // 6
+          {1,1,1,0,0,0,0}, // 7
+          {1,1,1,1,1,1,1}, // 8
+          {1,1,1,1,0,1,1}  // 9
+        };
+        if (digit >= 0 && digit <= 9) {
+          digitalWrite(segA, segmentMap[digit][0]);
+          digitalWrite(segB, segmentMap[digit][1]);
+          digitalWrite(segC, segmentMap[digit][2]);
+          digitalWrite(segD, segmentMap[digit][3]);
+          digitalWrite(segE, segmentMap[digit][4]);
+          digitalWrite(segF, segmentMap[digit][5]);
+          digitalWrite(segG, segmentMap[digit][6]);
+        }
+      } else {
+        // Ignora outros caracteres
       }
     }
   }
