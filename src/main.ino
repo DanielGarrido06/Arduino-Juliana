@@ -13,6 +13,7 @@ enum SystemState {
 
 // IR Remote button codes
 const int POWER_BUTTON = 0;
+const int BUTTON_CODES[10] = {12, 16, 17, 18, 20, 21, 22, 24, 25, 26};
 
 // Display pins
 const int SEGMENT_PINS[] = {4, 3, 9, 8, 7, 5, 6}; // A, B, C, D, E, F, G
@@ -57,6 +58,7 @@ void clearSegmentDisplay();
 void displayDigitOnSegments(int digit);
 void updateLCDSystemState();
 void clearLCDInputLine();
+void processIRInput(int button);
 void processCharacterInput(char c);
 void processLetterInput(char letter);
 void processNumberInput(char number);
@@ -234,6 +236,18 @@ void handleSystemOn(int button) {
     updateLCDSystemState();
     clearLCDInputLine();
     clearSegmentDisplay();
+  }
+  else{
+    processIRInput(button);
+  }  
+}
+
+void processIRInput(int button){
+  for (int i = 0; i < 10; i++) {
+    if (button == BUTTON_CODES[i]) {
+      displayDigitOnSegments(i);
+      break;
+    }
   }
 }
 
