@@ -140,7 +140,6 @@ void loop()
         userInputBuffer[0] = '\0'; // Limpa o buffer ao desligar
         lcd_1.setCursor(0, 1);
         lcd_1.print("                "); // Limpa a linha do LCD
-        // TODO: DISPLAY DE 7 SEGMENTOS
       }
     }
   }

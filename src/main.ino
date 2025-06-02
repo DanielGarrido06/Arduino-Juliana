@@ -239,12 +239,20 @@ void processSerialInput() {
 }
 
 void processCharacterInput(char c) {
+  // Skip LCD update during rapid input
+  static unsigned long lastDisplayUpdate = 0;
+  
   if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
     processLetterInput(c);
+    
+    // Update display only every 100ms during rapid input
+    if (millis() - lastDisplayUpdate > 100) {
+      updateLCDInputDisplay();
+      lastDisplayUpdate = millis();
+    }
   } else if (c >= '0' && c <= '9') {
     processNumberInput(c);
   }
-  // Ignore other characters
 }
 
 void processLetterInput(char letter) {
