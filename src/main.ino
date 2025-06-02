@@ -32,6 +32,7 @@ const int LCD_HEIGHT = 2;
 SystemState currentState = SYSTEM_OFF;
 int lastButtonPressed = -1;
 unsigned long lastButtonTime = 0;
+unsigned long lastLoopTime = 0; // Add this for non-blocking timing
 char userInputBuffer[LCD_WIDTH + 1] = ""; // +1 for null terminator
 
 // 7-segment display patterns (A-G segments)
@@ -73,6 +74,13 @@ void setup() {
 }
 
 void loop() {
+    // Non-blocking delay using millis()
+  unsigned long currentTime = millis();
+  if (currentTime - lastLoopTime < LOOP_DELAY) {
+    return; // Exit early if not enough time has passed
+  }
+  lastLoopTime = currentTime;
+
   int button = readInfrared();
   
   // Handle button press with debouncing
@@ -90,8 +98,6 @@ void loop() {
   if (currentState == SYSTEM_ON) {
     processSerialInput();
   }
-  
-  delay(LOOP_DELAY);
 }
 
 bool isValidButtonPress(int button) {
@@ -232,24 +238,20 @@ void handleSystemOn(int button) {
 }
 
 void processSerialInput() {
-  while (Serial.available()) {
+  static unsigned long lastCharProcessTime = 0;
+  
+  // Process only one character per loop iteration for better responsiveness
+  if (Serial.available() && (millis() - lastCharProcessTime >= LOOP_DELAY)) {
     char c = Serial.read();
     processCharacterInput(c);
+    lastCharProcessTime = millis();
   }
 }
 
 void processCharacterInput(char c) {
   // Skip LCD update during rapid input
-  static unsigned long lastDisplayUpdate = 0;
-  
   if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
     processLetterInput(c);
-    
-    // Update display only every 100ms during rapid input
-    if (millis() - lastDisplayUpdate > 100) {
-      updateLCDInputDisplay();
-      lastDisplayUpdate = millis();
-    }
   } else if (c >= '0' && c <= '9') {
     processNumberInput(c);
   }
