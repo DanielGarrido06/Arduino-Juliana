@@ -1,9 +1,24 @@
+/**
+  Este código implementa um sistema embarcado que utiliza um controle remoto infravermelho (IR) para interagir com um Arduino.
+  O sistema possui dois estados principais: ligado (ON) e desligado (OFF), controlados por um botão POWER do controle remoto.
+  
+  Funcionalidades:
+  - Recepção de comandos IR para alternar o estado do sistema e exibir dígitos no display de 7 segmentos.
+  - Exibição do estado atual do sistema em um display LCD 16x2.
+  - Entrada de caracteres pelo teclado do computador conectado, exibindo letras na segunda linha do LCD e números no display de 7 segmentos.
+  - Implementação de debounce para evitar múltiplas leituras do mesmo botão IR.
+  - Mapeamento dos códigos dos botões do controle remoto para ações específicas.
+  - Atualização não-bloqueante do loop principal para garantir responsividade.
+  - Os números de 0 a 9 são exibidos no display de 7 segmentos tanto quando os botões correspondentes são pressionados,
+    quanto quando números são digitados via serial.
+ */
+
 #define IR_RECEIVE_PIN 2 // Pino de recepção do IR
 #define EXCLUDE_UNIVERSAL_PROTOCOLS // Exclui protocolos IR não usados
 #define DECODE_NEC // Inclui de volta o protocolo NEC, que é de fato usado por este controle remoto
 
-#include <Adafruit_LiquidCrystal.h>
-#include <IRremote.h>
+#include <Adafruit_LiquidCrystal.h> // Biblioteca para controle do display LCD
+#include <IRremote.h> // Biblioteca para recepção de sinais infravermelhos
 
 // Enum representando os estados do sistema
 enum SystemState {
@@ -13,7 +28,7 @@ enum SystemState {
 
 // Mapeamento dos botões do controle remoto
 const int POWER_BUTTON = 0;
-const int BUTTON_CODES[10] = {12, 16, 17, 18, 20, 21, 22, 24, 25, 26}; // BUTTON_CODES[i] = Código do botão i no controle remoto
+const int BUTTON_CODES[10] = {12, 16, 17, 18, 20, 21, 22, 24, 25, 26}; // BUTTON_CODES[i] = Código do botão do número i no controle remoto (12 para 0, 16 para 1, etc.)
 
 // Pinos do display de 7 segmentos
 const int SEGMENT_PINS[] = {4, 3, 9, 8, 7, 5, 6}; // A, B, C, D, E, F, G
@@ -21,8 +36,8 @@ const int SEGMENT_A = 0, SEGMENT_B = 1, SEGMENT_C = 2, SEGMENT_D = 3;
 const int SEGMENT_E = 4, SEGMENT_F = 5, SEGMENT_G = 6;
 
 // Constantes de tempo
-const unsigned long DEBOUNCE_DELAY = 500; // intervalo de debounce em milissegundos
-const int LOOP_DELAY = 10; // intervalo de loop em milissegundos
+const unsigned long DEBOUNCE_DELAY = 500; // Intervalo de debounce em milissegundos
+const int LOOP_DELAY = 10; // Intervalo de loop em milissegundos
 
 // Configuração do LCD
 Adafruit_LiquidCrystal lcd_1(0); // Inicializa o LCD com o endereço 0x27
@@ -32,9 +47,9 @@ const int LCD_HEIGHT = 2; // Altura do LCD
 // Variáveis globais
 SystemState currentState = SYSTEM_OFF;
 int lastButtonPressed = -1;
-unsigned long lastButtonTime = 0;
-unsigned long lastLoopTime = 0; // Add this for non-blocking timing
-char userInputBuffer[LCD_WIDTH + 1] = ""; // +1 for null terminator
+unsigned long lastButtonTime = 0; // Tempo do último botão pressionado
+unsigned long lastLoopTime = 0; // Variável para controle do tempo do loop
+char userInputBuffer[LCD_WIDTH + 1] = ""; // +1 para o terminador nulo '\0'
 
 // Padrões dos dígitos para o display de 7 segmentos (a, b, c, d, e, f, g)
 const bool DIGIT_PATTERNS[10][7] = {
@@ -69,7 +84,7 @@ void processCharacterInput(char c);
 void processLetterInput(char letter);
 void processNumberInput(char number);
 
-// Função de configuração do Arduino, chamada uma vez no início
+// Função de configuração do Arduino, chamada uma vez no início.
 void setup() {
   initializeSegmentDisplay();
   
@@ -80,7 +95,7 @@ void setup() {
   updateLCDSystemState();
 }
 
-// Função de loop do Arduino, chamada repetidamente a cada LOOP_DELAY milissegundos
+// Função de loop do Arduino, chamada repetidamente a cada LOOP_DELAY milissegundos. Essa é a função principal do programa.
 void loop() {
     // delay não-bloqueante para evitar travamentos
   unsigned long currentTime = millis();
@@ -108,13 +123,13 @@ void loop() {
   }
 }
 
-// Função para verificar se o botão pressionado é válido
+// Função para verificar se o botão pressionado é válido. Retorna TRUE ou FALSE.
 bool isValidButtonPress(int button) {
   return (button != lastButtonPressed && 
           (millis() - lastButtonTime > DEBOUNCE_DELAY));
 }
 
-// Função para mapear o código IR para o botão correspondente
+// Função para mapear o código IR para o botão correspondente. Retorna o número do botão ou -1 se não for um botão válido.
 int mapCodeToButton(unsigned long code) {
   // Map the IR code to the corresponding remote button.
   // The buttons are in this order on the remote:
@@ -142,7 +157,7 @@ int mapCodeToButton(unsigned long code) {
   return -1;
 }
 
-// Função para ler o código IR do controle remoto
+// Função para ler o código IR do controle remoto. Retorna o número do botão pressionado ou -1 se não for um botão válido.
 int readInfrared() {
   if (!IrReceiver.decode()) {
     return -1;
@@ -215,7 +230,7 @@ void updateLCDSystemState() {
 // Função para limpar a linha de entrada do LCD
 void clearLCDInputLine() {
   lcd_1.setCursor(0, 1);
-  lcd_1.print("                "); // Clear entire line
+  lcd_1.print("                "); // Limpa a linha de entrada
 }
 
 // Função para atualizar a exibição de entrada do LCD
@@ -234,7 +249,7 @@ void handleSystemOff(int button) {
     updateLCDSystemState();
     clearLCDInputLine();
     
-    // Clear serial buffer
+    // Limpa o buffer de entrada do usuário
     while (Serial.available()) {
       Serial.read();
     }
@@ -269,7 +284,7 @@ void processIRInput(int button){
 void processSerialInput() {
   static unsigned long lastCharProcessTime = 0;
   
-  // Process only one character per loop iteration for better responsiveness
+  // Processa somente se houver caracteres disponíveis e se o tempo desde o último processamento for maior que LOOP_DELAY
   if (Serial.available() && (millis() - lastCharProcessTime >= LOOP_DELAY)) {
     char c = Serial.read();
     processCharacterInput(c);
@@ -279,7 +294,7 @@ void processSerialInput() {
 
 // Função para processar a entrada de caracteres
 void processCharacterInput(char c) {
-  // Skip LCD update during rapid input
+  // Verifica se o caractere é uma letra ou um número
   if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
     processLetterInput(c);
   } else if (c >= '0' && c <= '9') {
@@ -289,7 +304,7 @@ void processCharacterInput(char c) {
 
 // Função para processar a entrada de letras
 void processLetterInput(char letter) {
-  // Convert to uppercase if lowercase
+  // Converte letras minúsculas para maiúsculas usando aritimética ASCII
   if (letter >= 'a' && letter <= 'z') {
     letter = letter - 'a' + 'A';
   }
@@ -297,11 +312,11 @@ void processLetterInput(char letter) {
   int bufferLength = strlen(userInputBuffer);
   
   if (bufferLength < LCD_WIDTH) {
-    // Add to end of buffer
+    // Adiciona a letra ao final do buffer
     userInputBuffer[bufferLength] = letter;
     userInputBuffer[bufferLength + 1] = '\0';
   } else {
-    // Shift buffer left and add new character
+    // Desloca o buffer para a esquerda e adiciona a letra no final
     memmove(userInputBuffer, userInputBuffer + 1, LCD_WIDTH - 1);
     userInputBuffer[LCD_WIDTH - 1] = letter;
     userInputBuffer[LCD_WIDTH] = '\0';
