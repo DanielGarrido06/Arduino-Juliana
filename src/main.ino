@@ -28,7 +28,7 @@ enum SystemState {
 
 // Mapeamento dos botões do controle remoto
 const int POWER_BUTTON = 0;
-const int BUTTON_CODES[10] = {12, 16, 17, 18, 20, 21, 22, 24, 25, 26}; // BUTTON_CODES[i] = Código do botão do número i no controle remoto (12 para 0, 16 para 1, etc.)
+const int BUTTON_CODES[10] = {12, 16, 17, 18, 20, 21, 22, 24, 25, 26}; // BUTTON_CODES[i] = Código do botão do número i no controle remoto (12 para 0, 16 para 1, etc.) Os codigos são da função dada pelo Tinkercad.
 
 // Pinos do display de 7 segmentos
 const int SEGMENT_PINS[] = {4, 3, 9, 8, 7, 5, 6}; // A, B, C, D, E, F, G
@@ -45,11 +45,11 @@ const int LCD_WIDTH = 16; // Largura do LCD
 const int LCD_HEIGHT = 2; // Altura do LCD
 
 // Variáveis globais
-SystemState currentState = SYSTEM_OFF;
-int lastButtonPressed = -1;
+SystemState currentState = SYSTEM_OFF;  // Estado atual do sistema (OFF ou ON)
+int lastButtonPressed = -1;  // Último botão pressionado (-1 significa nenhum botão pressionado) (útil pro debounce)
 unsigned long lastButtonTime = 0; // Tempo do último botão pressionado
 unsigned long lastLoopTime = 0; // Variável para controle do tempo do loop
-char userInputBuffer[LCD_WIDTH + 1] = ""; // +1 para o terminador nulo '\0'
+char userInputBuffer[LCD_WIDTH + 1] = ""; // (+1 para o terminador nulo '\0') // variavel para armazenar a entrada do usuário (letras) no LCD
 
 // Padrões dos dígitos para o display de 7 segmentos (a, b, c, d, e, f, g)
 const bool DIGIT_PATTERNS[10][7] = {
@@ -100,13 +100,13 @@ void loop() {
     // delay não-bloqueante para evitar travamentos
   unsigned long currentTime = millis();
   if (currentTime - lastLoopTime < LOOP_DELAY) {
-    return; // Exit early if not enough time has passed
+    return; // sai do loop se o tempo desde o último loop for menor que LOOP_DELAY
   }
   lastLoopTime = currentTime;
 
-  int button = readInfrared();
+  int button = readInfrared();  // Lê o código IR do controle remoto e retorna o número do botão pressionado ou -1 se não for um botão válido
   
-  // Handle button press with debouncing
+  // lida com o botão pressionado, se for válido
   if (isValidButtonPress(button)) {
     updateLastButton(button);
     
@@ -117,7 +117,7 @@ void loop() {
     }
   }
   
-  // Process serial input only when system is on
+  // processa a entrada serial se o sistema estiver ligado
   if (currentState == SYSTEM_ON) {
     processSerialInput();
   }
